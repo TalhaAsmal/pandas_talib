@@ -143,7 +143,7 @@ def STO(df, n):
 
 
 def SMA(df, timeperiod, key='Close'):
-    result = pd.rolling_mean(df[key], timeperiod, min_periods=timeperiod)
+    result = pd.Series(pd.rolling_mean(df[key], timeperiod, min_periods=timeperiod), name='SMA_' + str(timeperiod))
     return out(SETTINGS, df, result)
 
 
@@ -195,10 +195,12 @@ def ADX(df, n, n_ADX):
     ATR = pd.Series(pd.ewma(TR_s, span=n, min_periods=n))
     UpI = pd.Series(UpI)
     DoI = pd.Series(DoI)
-    PosDI = pd.Series(pd.ewma(UpI, span=n, min_periods=n - 1) / ATR)
-    NegDI = pd.Series(pd.ewma(DoI, span=n, min_periods=n - 1) / ATR)
+    PosDI = pd.Series(pd.ewma(UpI, span=n, min_periods=n - 1) / ATR,name='PosDI')
+    NegDI = pd.Series(pd.ewma(DoI, span=n, min_periods=n - 1) / ATR,name='NegDI')
     result = pd.Series(pd.ewma(abs(PosDI - NegDI) / (PosDI + NegDI), span=n_ADX, min_periods=n_ADX - 1), name='ADX_' + str(n) + '_' + str(n_ADX))
-    return out(SETTINGS, df, result)
+    result = pd.concat([df,PosDI,NegDI,result], join='outer', axis=1,ignore_index=True)
+    result.columns=["High","Low","Close","PosDI","NegDI","ADX"]
+    return result
 
 
 def MACD(df, n_fast, n_slow, price='Close'):
@@ -274,8 +276,8 @@ def RSI(df, n):
     UpI = [0]
     DoI = [0]
     while i + 1 <= len(df) - 1:  # df.index[-1]
-        UpMove = df.get_value(i + 1, 'High') - df.get_value(i, 'High')
-        DoMove = df.get_value(i, 'Low') - df.get_value(i + 1, 'Low')
+        UpMove = df.iloc[i + 1]['High'] - df.iloc[i]['High']
+        DoMove = df.iloc[i]['Low'] - df.iloc[i + 1]['Low']
         if UpMove > DoMove and UpMove > 0:
             UpD = UpMove
         else:
